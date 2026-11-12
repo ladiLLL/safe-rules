@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Safe Rules v1.2 – Rule-Based Data Validation &amp; Enrichment Platform</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <!-- TOP ENTERPRISE HEADER -->
+  <header class="top-header">
+    <div class="brand-block">
+      <div class="brand-logo">SR</div>
+      <div>
+        <div class="brand-title-row">
+          <h1>SAFE RULES</h1>
+          <span class="version-pill">v1.2 MVP+</span>
+          <span class="badge-deterministic" title="Azonos bemenet és konfiguráció = azonos eredmény">Deterministic Engine</span>
+        </div>
+        <p class="brand-subtitle">Making complex business rules visible, manageable and reliable — Non-Destructive Human-in-the-Loop Platform</p>
+      </div>
+    </div>
+
+    <div class="header-controls">
+      <div class="control-group">
+        <label for="useCaseSelector">Aktív Use Case (SC-01):</label>
+        <select id="useCaseSelector" class="header-select"></select>
+        <button id="btnNewUseCaseModal" class="btn btn-secondary btn-sm" title="Új use case konfigurálása egyedi kód nélkül">+ Új Use Case</button>
+      </div>
+
+      <div class="control-group">
+        <label for="activeActorInput">Bejelentkezett Szerepkör / Jóváhagyó:</label>
+        <select id="activeActorInput" class="header-select">
+          <option value="Kovács Anna (Üzleti Szabálygazda)">Kovács Anna (Üzleti Szabálygazda)</option>
+          <option value="Nagy Gábor (Minőség- és Kockázatellenőr)">Nagy Gábor (Minőség- és Kockázatellenőr)</option>
+          <option value="Tóth Péter (Adatmodell Adminisztrátor)">Tóth Péter (Adatmodell Adminisztrátor)</option>
+        </select>
+      </div>
+
+      <div class="header-actions">
+        <button id="btnQuickExecute" class="btn btn-primary btn-sm">▶ Éles Futtatás (Prod)</button>
+        <a id="btnHeaderExportXlsx" href="/api/export/xlsx" class="btn btn-success btn-sm" download>⬇ Excel (.xlsx)</a>
+        <a id="btnHeaderExportCsv" href="/api/export/csv" class="btn btn-outline btn-sm" download>⬇ CSV</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- PIPELINE ARCHITECTURE FLOW BAR (Section 6 & 14) -->
+  <nav class="main-nav" aria-label="Safe Rules modulok">
+    <button class="nav-tab active" data-tab="results">
+      <span class="tab-step">12</span>
+      <span class="tab-label">Results (Eredménytábla)</span>
+      <span class="tab-badge" id="navBadgeResults">105</span>
+    </button>
+    <button class="nav-tab" data-tab="data-setup">
+      <span class="tab-step">07</span>
+      <span class="tab-label">Data Setup (Adatforrások)</span>
+      <span class="tab-badge" id="navBadgeSources">4</span>
+    </button>
+    <button class="nav-tab" data-tab="rule-manager">
+      <span class="tab-step">09</span>
+      <span class="tab-label">Rule Manager (Szabályok)</span>
+      <span class="tab-badge" id="navBadgeRules">85</span>
+    </button>
+    <button class="nav-tab" data-tab="rule-builder">
+      <span class="tab-step">08</span>
+      <span class="tab-label">Rule Builder (AI + Vizuális)</span>
+    </button>
+    <button class="nav-tab" data-tab="dependencies">
+      <span class="tab-step">09</span>
+      <span class="tab-label">Rule Dependencies (DAG)</span>
+    </button>
+    <button class="nav-tab" data-tab="testing">
+      <span class="tab-step">10</span>
+      <span class="tab-label">Rule Testing &amp; Approval</span>
+      <span class="tab-badge" id="navBadgeTests">6</span>
+    </button>
+    <button class="nav-tab" data-tab="execution">
+      <span class="tab-step">11</span>
+      <span class="tab-label">Execution (Motor)</span>
+    </button>
+    <button class="nav-tab" data-tab="review">
+      <span class="tab-step">13</span>
+      <span class="tab-label">Review (Emberi Ellenőrzés)</span>
+      <span class="tab-badge badge-warn" id="navBadgeReview">0</span>
+    </button>
+    <button class="nav-tab" data-tab="audit-sc">
+      <span class="tab-step">20</span>
+      <span class="tab-label">Audit &amp; SC-01..SC-12</span>
+      <span class="tab-badge badge-ok" id="navBadgeSc">12/12</span>
+    </button>
+  </nav>
+
+  <!-- GLOBAL NOTIFICATION BANNER -->
+  <div id="toastBanner" class="toast-banner hidden"></div>
+
+  <!-- MAIN WORKSPACE -->
+  <main class="workspace-container">
+
+    <!-- ================================================================== -->
+    <!-- TAB 1: RESULTS (Interaktív Eredménytáblázat - Section 5 & 12)       -->
+    <!-- ================================================================== -->
+    <section id="tab-results" class="tab-panel active">
+      <div class="kpi-strip" id="resultsKpiStrip"></div>
+
+      <!-- Highlight Box for Section 5 Benchmark Table (1001, 1002, 1003) -->
+      <div class="card highlight-card" id="specSection5Showcase">
+        <div class="card-header">
+          <div>
+            <h2>Specifikáció 5. fejezet – Példa Use Case kiértékelési összefoglaló (1001, 1002, 1003)</h2>
+            <p class="text-muted">A 80 éles (Prod) szabály determinisztikus végrehajtásának eredménye a referencia megrendeléseken. Kattintson bármelyik sorra a rekordszintű szabálymagyarázathoz (SC-09)!</p>
+          </div>
+          <div class="non-destructive-pill" id="sourceIntegrityBadge">
+            🔒 Forrásadat sértetlen (SHA-256 ellenőrizve – SC-11)
+          </div>
+        </div>
+        <div id="section5MiniTableContainer"></div>
+      </div>
+
+      <!-- Full Interactive Excel-like Result Grid -->
+      <div class="card">
+        <div class="card-header toolbar-header">
+          <div>
+            <h2>Result Viewer – Interaktív Eredménytáblázat (<span id="gridCountLabel">0</span> rekord)</h2>
+            <p class="text-muted">Rendezés, szűrés, keresés, oszlopválasztás, rekordszintű szabályindoklás és Excel/CSV export (Specifikáció 12. fejezet)</p>
+          </div>
+
+          <div class="grid-toolbar">
+            <input type="search" id="resultSearchInput" class="input-control" placeholder="Keresés rendelésszám, termék, cím, indoklás alapján..." />
+
+            <select id="resultStatusFilter" class="input-control">
+              <option value="ALL">Minden státusz</option>
+              <option value="Accepted">Accepted (Megfelel)</option>
+              <option value="Warning">Warning (Nem kritikus eltérés)</option>
+              <option value="Requires Review">Requires Review (Felülvizsgálandó)</option>
+              <option value="Error">Error (Üzleti szabálysértés)</option>
+              <option value="Execution Failed">Execution Failed (Technikai hiba)</option>
+            </select>
+
+            <select id="resultColumnMode" class="input-control">
+              <option value="focused">Fókuszált nézet (Forrás + Fő szabályeredmények)</option>
+              <option value="all_enriched">Teljes nézet (Minden számított és köztes mezővel)</option>
+            </select>
+
+            <a href="/api/export/xlsx" class="btn btn-success btn-sm" download>⬇ Excel (.xlsx) Export</a>
+            <a href="/api/export/csv" class="btn btn-outline btn-sm" download>⬇ CSV Export</a>
+          </div>
+        </div>
+
+        <div class="table-scroll-wrapper">
+          <table class="data-grid" id="mainResultsTable">
+            <thead id="mainResultsThead"></thead>
+            <tbody id="mainResultsTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- TAB 2: DATA SETUP (Adatforrások és Adatmodell - Section 7)          -->
+    <!-- ================================================================== -->
+    <section id="tab-data-setup" class="tab-panel">
+      <div class="grid-2col">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2>Data Source Manager – Kapcsolt Adatforrások</h2>
+              <p class="text-muted">Excel/CSV, SQLite adatbázis, REST API és konfigurált referenciaadatok (Specifikáció 7. fejezet)</p>
+            </div>
+          </div>
+          <div id="dataSourcesListContainer"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2>Új Adatforrás Betöltése (Excel .xlsx / CSV)</h2>
+              <p class="text-muted">A forrásadatok írásvédett rétegbe kerülnek SHA-256 integritásvédelemmel (Non-Destructive Processing)</p>
+            </div>
+          </div>
+          <form id="importDataSourceForm" class="form-stack">
+            <div class="form-row">
+              <div class="form-field">
+                <label>Adatforrás azonosító (ID)</label>
+                <input type="text" id="importDsId" class="input-control" value="DS-ORDERS" required />
+              </div>
+              <div class="form-field">
+                <label>Adatforrás megnevezése</label>
+                <input type="text" id="importDsName" class="input-control" value="Megrendelések Fő Adathalmaz (Excel/CSV)" required />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-field">
+                <label>Forrás típusa</label>
+                <select id="importDsType" class="input-control">
+                  <option value="excel_csv">Excel (.xlsx) / CSV fájl</option>
+                  <option value="reference_data">Konfigurált Referenciaadat</option>
+                  <option value="sqlite_table">SQL Adatbázis Lekérdezés</option>
+                  <option value="rest_api">REST API JSON végpont</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label>Szerep az adatmodellben</label>
+                <select id="importDsPrimary" class="input-control">
+                  <option value="true">Fő adathalmaz (Primary Dataset)</option>
+                  <option value="false">Kapcsolódó / Referencia adathalmaz</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-field">
+              <label>Fájl feltöltése (.xlsx vagy .csv)</label>
+              <input type="file" id="importFileInput" accept=".csv,.xlsx" class="input-control" />
+            </div>
+            <div class="form-field">
+              <label>Vagy közvetlen CSV tartalom beillesztése:</label>
+              <textarea id="importCsvTextarea" rows="4" class="input-control code-font" placeholder="rendeles_szam,ugyfel_kod,termek,anyag,szelesseg_mm,magassag_mm..."></textarea>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">Adatforrás Betöltése és SHA-256 Rögzítése</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2>Data Model &amp; Mapping – Rekordkapcsolatok, Hiányzó/Többszörös Találatok és Aggregációk</h2>
+            <p class="text-muted">Kapcsolómezők (Join Keys), 1:1 és 1:N több rekordot érintő kapcsolatok konfigurációja egyedi kód nélkül</p>
+          </div>
+        </div>
+        <div id="dataMappingContainer"></div>
+      </div>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- TAB 3: RULE MANAGER (Szabályok, Életciklus, Verziók - Section 9)    -->
+    <!-- ================================================================== -->
+    <section id="tab-rule-manager" class="tab-panel">
+      <div class="kpi-strip" id="rulesKpiStrip"></div>
+
+      <div class="card">
+        <div class="card-header toolbar-header">
+          <div>
+            <h2>Rule Manager – Üzleti Szabályok Kezelése (<span id="ruleCountLabel">85</span> szabály)</h2>
+            <p class="text-muted">80+ egymástól függő szabály áttekinthető csoportosítása, életciklus-kezelése (Draft / Test / Prod / Retired) és verziótörténete</p>
+          </div>
+          <div class="grid-toolbar">
+            <input type="search" id="ruleSearchInput" class="input-control" placeholder="Keresés ID (pl. R-048), név, bemeneti/kimeneti mező..." />
+            <select id="ruleStatusFilter" class="input-control">
+              <option value="ALL">Minden életciklus</option>
+              <option value="Prod">Prod (Éles szabályok)</option>
+              <option value="Test">Test (Teszt alatt)</option>
+              <option value="Draft">Draft (Tervezet)</option>
+              <option value="Retired">Retired (Kivont)</option>
+            </select>
+            <select id="ruleCategoryFilter" class="input-control">
+              <option value="ALL">Minden kategória (8 réteg)</option>
+            </select>
+            <button id="btnGoNewRule" class="btn btn-primary btn-sm">+ Új Szabály Létrehozása</button>
+          </div>
+        </div>
+
+        <div class="table-scroll-wrapper">
+          <table class="data-grid" id="rulesTable">
+            <thead>
+              <tr>
+                <th>Sorrend</th>
+                <th>ID</th>
+                <th>Szabály neve és kategória</th>
+                <th>Típus</th>
+                <th>Bemeneti mezők</th>
+                <th>Kimeneti mező &amp; Hatás</th>
+                <th>Függőségek (Upstream)</th>
+                <th>Életciklus</th>
+                <th>Validáció</th>
+                <th>Verzió &amp; Jóváhagyás</th>
+                <th>Műveletek</th>
+              </tr>
+            </thead>
+            <tbody id="rulesTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- TAB 4: RULE BUILDER (AI, Vizuális, Döntési tábla - Section 8)       -->
+    <!-- ================================================================== -->
+    <section id="tab-rule-builder" class="tab-panel">
+      <!-- 8.1 Natural Language & AI Rule Assistant -->
+      <div class="card ai-builder-card">
+        <div class="card-header">
+          <div>
+            <h2>8.1 Természetes Nyelvű AI Szabályasszisztens</h2>
+            <p class="text-muted">Írja le magyarul vagy angolul az üzleti feltételt! Az AI strukturált szabályjavaslatot, függőség- és ellentmondáselemzést készít (soha nem generál nyers SQL-t, és nem élesít önállóan – Specifikáció 8.1 &amp; 15).</p>
+          </div>
+        </div>
+        <div class="form-stack">
+          <div class="quick-prompts">
+            <span>Gyors példák:</span>
+            <button type="button" class="btn btn-xs btn-outline ai-prompt-chip" data-prompt="Ha a szállítási cím eltér a szerződéses címtől, akkor az eredmény legyen Review és Requires Review státusz.">Címeltérés szabály (Review)</button>
+            <button type="button" class="btn btn-xs btn-outline ai-prompt-chip" data-prompt="Ha a szélesség nagyobb mint 2400 mm, akkor nem gyártható (Error).">Szélességi korlát (> 2400 mm)</button>
+            <button type="button" class="btn btn-xs btn-outline ai-prompt-chip" data-prompt="Készíts döntési táblát a termék, anyag és szélesség kombinációk gyárthatóságára!">Döntési tábla (Termék × Anyag × Méret)</button>
+            <button type="button" class="btn btn-xs btn-outline ai-prompt-chip" data-prompt="Számítsd ki az üvegfelületet m2-ben a szélesség és magasság szorzatából!">Felületszámítás képlet (m²)</button>
+            <button type="button" class="btn btn-xs btn-outline ai-prompt-chip" data-prompt="Ha a kedvezmény meghaladja a 15 százalékot, kérjen vezetői felülvizsgálatot (Requires Review).">Kedvezmény limit (15%)</button>
+          </div>
+          <div class="ai-input-row">
+            <textarea id="aiNaturalLanguageInput" rows="2" class="input-control" placeholder="Pl.: Ha a terméktípus Door B és a szélesség meghaladja a 2200 mm-t, akkor nem gyártható (Error)..."></textarea>
+            <button type="button" id="btnAiGenerateRule" class="btn btn-primary">✨ Strukturált AI Javaslat Készítése</button>
+          </div>
+          <div id="aiProposalResultBox" class="ai-proposal-box hidden"></div>
+        </div>
+      </div>
+
+      <!-- 8.2 & 8.3 Visual Condition Builder, Decision Table & Safe Expression Editor -->
+      <div class="grid-builder">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2 id="builderFormTitle">8.2 &amp; 8.3 Strukturált Szabály Szerkesztő (Vizuális / Döntési Tábla / Kifejezés)</h2>
+              <p class="text-muted">Minden szerkesztési mód ugyanazt a közös, determinisztikus strukturált szabálymodellt állítja elő.</p>
+            </div>
+            <button type="button" id="btnResetBuilderForm" class="btn btn-outline btn-sm">Alaphelyzet (Új szabály)</button>
+          </div>
+
+          <form id="ruleBuilderForm" class="form-stack">
+            <div class="form-row">
+              <div class="form-field">
+                <label>Szabály Azonosító (ID)</label>
+                <input type="text" id="rbRuleId" class="input-control" placeholder="R-086" required />
+              </div>
+              <div class="form-field" style="flex:2">
+                <label>Szabály Neve</label>
+                <input type="text" id="rbRuleName" class="input-control" placeholder="Pl. Maximális szárnymagasság ellenőrzése" required />
+              </div>
+              <div class="form-field">
+                <label>Kategória / Csoport</label>
+                <input type="text" id="rbRuleCategory" class="input-control" value="2. Geometria és Méretszámítások" required />
+              </div>
+            </div>
+
+            <div class="form-field">
+              <label>Üzleti leírás és indoklás</label>
+              <input type="text" id="rbRuleDescription" class="input-control" placeholder="Részletes leírás az üzleti felhasználók és az audit számára..." />
+            </div>
+
+            <!-- Mode Selector: Visual Condition vs Decision Table vs Expression -->
+            <div class="form-field">
+              <label>Szabályalkotási mód kiválasztása:</label>
+              <div class="mode-switcher">
+                <button type="button" class="mode-btn active" data-rbmode="visual_condition">8.2 Vizuális Feltételszerkesztő (AND/OR/NOT)</button>
+                <button type="button" class="mode-btn" data-rbmode="decision_table">8.3 Döntési Tábla (Decision Table)</button>
+                <button type="button" class="mode-btn" data-rbmode="expression">8.3 Számított Kifejezés / Képlet</button>
+              </div>
+              <input type="hidden" id="rbRuleType" value="visual_condition" />
+            </div>
+
+            <!-- MODE A: Visual Condition Editor -->
+            <div id="rbVisualEditorPane" class="rb-mode-pane">
+              <div class="condition-group-header">
+                <label>Logikai kapcsolat a feltételek között:</label>
+                <select id="rbCombinator" class="input-control input-sm">
+                  <option value="AND">AND (Minden feltételnek teljesülnie kell)</option>
+                  <option value="OR">OR (Legalább egy feltételnek teljesülnie kell)</option>
+                  <option value="NOT">NOT (Tagadás – egyik sem teljesülhet)</option>
+                </select>
+                <button type="button" id="btnAddConditionRow" class="btn btn-secondary btn-xs">+ Feltétel sor hozzáadása</button>
+              </div>
+              <div id="rbConditionRowsContainer" class="condition-rows-stack"></div>
+            </div>
+
+            <!-- MODE B: Decision Table Editor -->
+            <div id="rbDecisionTablePane" class="rb-mode-pane hidden">
+              <div class="condition-group-header">
+                <label>Döntési tábla bemeneti mezők (vesszővel elválasztva):</label>
+                <input type="text" id="rbDtInputs" class="input-control input-sm" value="termek, anyag, szelesseg_mm" style="max-width:300px" />
+                <label>Hit Policy:</label>
+                <select id="rbDtHitPolicy" class="input-control input-sm">
+                  <option value="FIRST">FIRST (Első illeszkedő sor)</option>
+                  <option value="UNIQUE">UNIQUE (Egyedi szabály)</option>
+                  <option value="COLLECT">COLLECT (Összes találat)</option>
+                </select>
+                <button type="button" id="btnAddDtRow" class="btn btn-secondary btn-xs">+ Döntési sor hozzáadása</button>
+              </div>
+              <div id="rbDtRowsContainer" class="condition-rows-stack"></div>
+            </div>
+
+            <!-- MODE C: Expression Editor -->
+            <div id="rbExpressionPane" class="rb-mode-pane hidden">
+              <div class="form-field">
+                <label>Strukturált számítási képlet (Támogatott: IF, ROUND, MIN, MAX, ABS, CONCAT, +, -, *, /, AND, OR):</label>
+                <input type="text" id="rbExpressionInput" class="input-control code-font" value="ROUND((szelesseg_mm * magassag_mm) / 1000000, 2)" />
+                <small class="text-muted">Példa: <code>IF(anyag == "PVC" AND felulet_m2 > 2.0, "Megerősített", "Normál")</code></small>
+              </div>
+            </div>
+
+            <!-- Rule Output Configuration -->
+            <div class="output-config-box">
+              <h3>Szabály Kimenet és Státuszhatás (Specifikáció 8.3)</h3>
+              <div class="form-row">
+                <div class="form-field">
+                  <label>Eredménymező neve (outputField)</label>
+                  <input type="text" id="rbOutputField" class="input-control code-font" value="egyedi_ellenorzes_ok" required />
+                </div>
+                <div class="form-field">
+                  <label>Kimenet típusa</label>
+                  <select id="rbOutputType" class="input-control">
+                    <option value="boolean">Logikai érték (true / false)</option>
+                    <option value="classification">Szöveges besorolás (pl. Igen / Nem / OK / Review)</option>
+                    <option value="calculated">Számított érték (új eredménymező)</option>
+                  </select>
+                </div>
+                <div class="form-field">
+                  <label>Érték ha IGAZ</label>
+                  <input type="text" id="rbTrueValue" class="input-control" value="Igen" />
+                </div>
+                <div class="form-field">
+                  <label>Érték ha HAMIS</label>
+                  <input type="text" id="rbFalseValue" class="input-control" value="Nem" />
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-field">
+                  <label>Státuszhatás ha IGAZ</label>
+                  <select id="rbOnTrueStatus" class="input-control">
+                    <option value="Accepted">Accepted (Megfelel)</option>
+                    <option value="Warning">Warning (Figyelmeztetés)</option>
+                    <option value="Requires Review">Requires Review (Felülvizsgálat)</option>
+                    <option value="Error">Error (Üzleti hiba)</option>
+                  </select>
+                </div>
+                <div class="form-field">
+                  <label>Státuszhatás ha HAMIS</label>
+                  <select id="rbOnFalseStatus" class="input-control">
+                    <option value="Error" selected>Error (Üzleti hiba)</option>
+                    <option value="Requires Review">Requires Review (Felülvizsgálat)</option>
+                    <option value="Warning">Warning (Figyelmeztetés)</option>
+                    <option value="Accepted">Accepted (Megfelel)</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-field">
+                  <label>Magyarázó üzenet ha IGAZ</label>
+                  <input type="text" id="rbPassMessage" class="input-control" value="A feltétel maradéktalanul teljesült." />
+                </div>
+                <div class="form-field">
+                  <label>Magyarázó üzenet ha HAMIS (mezőhelyettesítés: {szelesseg_mm})</label>
+                  <input type="text" id="rbFailMessage" class="input-control" value="A feltétel sérült, a rekord nem felel meg az előírásnak!" />
+                </div>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">💾 Szabály Mentése (Draft) &amp; Függőség/Ciklus Ellenőrzés</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Live Unified Structured Rule Model Inspector -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2>Közös Strukturált Szabálymodell (JSON AST)</h2>
+              <p class="text-muted">Valós idejű előnézet: automatikusan felismert bemeneti mezők és függőségek</p>
+            </div>
+          </div>
+          <pre id="rbLiveJsonPreview" class="json-preview"></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- TAB 5: RULE DEPENDENCIES (Függőségi Háló, Sorrend, Hatáselemzés)     -->
+    <!-- ================================================================== -->
+    <section id="tab-dependencies" class="tab-panel">
+      <div class="grid-2col">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2>Függőségi Háló (DAG) &amp; Sorrendkezelés (SC-04)</h2>
+              <p class="text-muted">Automatikus topologikus sorrendjavaslat, körkörös függőség tiltása és kézi sorrend-felülbírálat ellenőrzése</p>
+            </div>
+            <div class="header-actions">
+              <button id="btnApplyRecommendedOrder" class="btn btn-primary btn-sm">⚡ Automatikus Sorrendjavaslat Alkalmazása</button>
+              <button id="btnSimulateInvalidOrder" class="btn btn-outline btn-sm" title="Demonstrálja, hogy a rendszer tiltja a kötelező függőséget sértő sorrendet">🛡 Tiltott Sorrend Tesztelése</button>
+            </div>
+          </div>
+          <div id="dependencyStatusBanner"></div>
+          <div id="dagLayersContainer" class="dag-layers-container"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2>Módosítási Hatáselemzés (Impact Analysis – Specifikáció 9. &amp; 10.)</h2>
+              <p class="text-muted">Válasszon ki egy szabályt, hogy lássa, mely közvetlen és közvetett függő szabályokra hat a módosítása, és mely teszteket kell újrafuttatni!</p>
+            </div>
+          </div>
+          <div class="form-row" style="margin-bottom: 12px;">
+            <select id="impactRuleSelector" class="input-control"></select>
+            <button id="btnRunImpactAnalysis" class="btn btn-secondary">Hatáselemzés Futtatása</button>
+          </div>
+          <div id="impactAnalysisResultContainer"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- TAB 6: RULE TESTING & APPROVAL (Tesztesetek & Jóváhagyás - Sec 10)   -->
+    <!-- ================================================================== -->
+    <section id="tab-testing" class="tab-panel">
+      <div class="card">
+        <div class="card-header toolbar-header">
+          <div>
+            <h2>Rule Validation – Felhasználói Tesztesetek és Jóváhagyási Kapu (SC-05, SC-06)</h2>
+            <p class="text-muted">A felhasználó rögzíti a bemeneteket és az elvárt eredményeket. Prod állapotba csak sikeresen tesztelt és jóváhagyott szabály kerülhet!</p>
+          </div>
+          <div class="header-actions">
+            <button id="btnRunAllTests" class="btn btn-primary">▶ Összes Teszteset Futtatása és Validálása</button>
+            <button id="btnAiSuggestTests" class="btn btn-secondary">✨ AI Teszteset-Javaslatok Kérése</button>
+          </div>
+        </div>
+
+        <div id="testCasesTableContainer"></div>
+      </div>
+
+      <div class="grid-2col">
+        <!-- Create / Confirm User Test Case -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2>Új Felhasználói Teszteset Rögzítése</h2>
+              <p class="text-muted">Az elvárt eredményt mindig a felhasználó határozza meg és erősíti meg</p>
+            </div>
+          </div>
+          <form id="newTestCaseForm" class="form-stack">
+            <div class="form-row">
+              <div class="form-field">
+                <label>Tesztkód</label>
+                <input type="text" id="tcCode" class="input-control" value="T07" required />
+              </div>
+              <div class="form-field" style="flex:2">
+                <label>Teszteset megnevezése / Feltétel</label>
+                <input type="text" id="tcName" class="input-control" placeholder="Pl. Magas kedvezmény (18%) felülvizsgálata" required />
+              </div>
+              <div class="form-field">
+                <label>Elvárt Végső Státusz</label>
+                <select id="tcExpectedStatus" class="input-control">
+                  <option value="Accepted">Accepted</option>
+                  <option value="Warning">Warning</option>
+                  <option value="Requires Review">Requires Review</option>
+                  <option value="Error">Error</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-field">
+              <label>Teszt bemeneti rekord (JSON):</label>
+              <textarea id="tcInputJson" rows="6" class="input-control code-font"></textarea>
+            </div>
+            <div class="form-field">
+              <label>Elvárt szabálykimenetek (JSON, pl. {"gyarthato":"Igen","cimellenorzes":"OK"}):</label>
+              <input type="text" id="tcExpectedOutputsJson" class="input-control code-font" value='{"gyarthato":"Igen"}' />
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">✓ Teszteset Mentése és Felhasználói Megerősítése</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Rule Promotion & Approval Gate (SC-06) -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2>Szabály Életciklus-léptetés és Élesítési Jóváhagyás (SC-06)</h2>
+              <p class="text-muted">Draft → Test → Prod léptetés kötelező tesztellenőrzéssel és jóváhagyói naplózással</p>
+            </div>
+          </div>
+          <div id="approvalGateContainer"></div>
+          <div id="aiTestSuggestionsContainer" style="margin-top: 16px;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- TAB 7: EXECUTION ENGINE (Determinisztikus Végrehajtás - Section 11) -->
+    <!-- ================================================================== -->
+    <section id="tab-execution" class="tab-panel">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2>Determinisztikus Rule Execution Engine (Specifikáció 11. fejezet)</h2>
+            <p class="text-muted">Forrásbetöltés → Bemeneti ellenőrzés → Adatkapcsolatok → Prod szabályok és függőségek → Sorrend → Végrehajtás → Eredménymezők → Eltérésosztályozás → Megjelenítés → Naplózás</p>
+          </div>
+          <div class="header-actions">
+            <button id="btnRunProdExecution" class="btn btn-primary">▶ Determinisztikus Éles Futtatás (Prod szabályok)</button>
+            <button id="btnRunTestExecution" class="btn btn-secondary">🧪 Teszt Futtatás (Prod + Test + Draft szabályok)</button>
+          </div>
+        </div>
+
+        <div id="pipelineStepsVisualizer" class="pipeline-steps-grid"></div>
+      </div>
+
+      <div class="grid-2col">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2>Futtatási Napló és Reprodukálhatósági Igazolás (SC-07 &amp; SC-11)</h2>
+              <p class="text-muted">Azonos bemenet és szabályverzió esetén a kimeneti SHA-256 hash bitről bitre megegyezik</p>
+            </div>
+          </div>
+          <div id="executionRunsHistoryContainer"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2>Üzleti Hiba vs. Technikai Végrehajtási Hiba Elkülönítése</h2>
+              <p class="text-muted">Specifikáció 11. &amp; 12. fejezet: A technikai hiba (Execution Failed) külön kategóriában jelenik meg az üzleti szabálysértéstől (Error)</p>
+            </div>
+          </div>
+          <div id="technicalVsBusinessExplanationBox"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- TAB 8: HUMAN VERIFICATION (Emberi Ellenőrzés - Section 13)          -->
+    <!-- ================================================================== -->
+    <section id="tab-review" class="tab-panel">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2>Human Verification – Kivételek és Eltérések Célzott Emberi Felülvizsgálata (Specifikáció 13. fejezet)</h2>
+            <p class="text-muted">Csak a hibás (Error), felülvizsgálandó (Requires Review), figyelmeztetett (Warning) vagy technikai hibás (Execution Failed) rekordok jelennek meg. A döntés külön, naplózott felülbírálat: NEM módosítja a forrásadatot vagy az eredeti szabályeredményt!</p>
+          </div>
+        </div>
+        <div id="humanVerificationQueueContainer"></div>
+      </div>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- TAB 9: AUDIT & SUCCESS CRITERIA SC-01..SC-12 (Section 17 & 20)      -->
+    <!-- ================================================================== -->
+    <section id="tab-audit-sc" class="tab-panel">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2>Sikerkritériumok Önellenőrző Mátrixa (SC-01 .. SC-12 – Specifikáció 20. fejezet)</h2>
+            <p class="text-muted">Valós idejű automatizált ellenőrzés a rendszer adatbázisán és szabálymotorján</p>
+          </div>
+          <button id="btnRefreshSelfCheck" class="btn btn-primary btn-sm">🔄 Önellenőrzés Újrafuttatása</button>
+        </div>
+        <div id="scMatrixContainer" class="sc-grid"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2>Audit Trail – Teljes Visszakövethetőségi Napló (SC-12)</h2>
+            <p class="text-muted">Minden szabálymódosítás, tesztfuttatás, jóváhagyás, éles végrehajtás, emberi felülbírálat és export időbélyeggel naplózva</p>
+          </div>
+        </div>
+        <div id="auditLogTableContainer"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- RECORD-LEVEL RULE EXPLANATION DRAWER / MODAL (SC-09) -->
+  <div id="recordTraceModal" class="modal-backdrop hidden">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-header">
+        <div>
+          <h2 id="traceModalTitle">Rekordszintű Szabálymagyarázat és Felülvizsgálat</h2>
+          <p id="traceModalSubtitle" class="text-muted"></p>
+        </div>
+        <button id="btnCloseTraceModal" class="btn-close" aria-label="Bezárás">&times;</button>
+      </div>
+      <div id="traceModalBody" class="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- NEW USE CASE CONFIGURATION MODAL (SC-01) -->
+  <div id="newUseCaseModal" class="modal-backdrop hidden">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div>
+          <h2>Új Use Case Konfigurálása Egyedi Alkalmazáskód Nélkül (SC-01)</h2>
+          <p class="text-muted">One platform foundation. One use case per deployment. Configurable rules.</p>
+        </div>
+        <button id="btnCloseNewUcModal" class="btn-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="createUseCaseForm" class="form-stack">
+          <div class="form-row">
+            <div class="form-field">
+              <label>Use Case Azonosító</label>
+              <input type="text" id="newUcId" class="input-control" value="UC-SUPPLIER-AUDIT" required />
+            </div>
+            <div class="form-field" style="flex:2">
+              <label>Use Case Megnevezés</label>
+              <input type="text" id="newUcName" class="input-control" value="Beszállítói Adat- és Árlista Ellenőrzés (Supplier Verification)" required />
+            </div>
+          </div>
+          <div class="form-field">
+            <label>Elsődleges azonosító mező (Primary Key)</label>
+            <input type="text" id="newUcPrimaryKey" class="input-control" value="tetel_id" required />
+          </div>
+          <div class="form-field">
+            <label>Kezdeti CSV adathalmaz (opcionális):</label>
+            <textarea id="newUcCsvData" rows="4" class="input-control code-font">tetel_id,beszallito,alkatresz,ar_eur,minosegi_tanusitvany
+SUP-101,G-U Vasalat Kft.,Bukó-nyíló csapágy,14.5,ISO-9001
+SUP-102,Ismeretlen Import Bt.,Acélmerevítő profil,42.0,NINCS
+SUP-103,Saint-Gobain Glass,3-rétegű üvegcsomag,68.0,CE-EN-1279</textarea>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Új Use Case Létrehozása és Aktiválása</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

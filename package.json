@@ -1,0 +1,14 @@
+{
+  "name": "safe-rules-platform",
+  "version": "1.2.0",
+  "description": "Safe Rules - Rule-Based Data Validation & Enrichment Platform (Specification v1.2)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test tests/safeRules.test.js",
+    "seed": "node src/db/seed.js --reset"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  }
+}
